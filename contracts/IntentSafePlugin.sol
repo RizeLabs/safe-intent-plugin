@@ -6,7 +6,7 @@ import {ISafe} from "@safe-global/safe-core-protocol/contracts/interfaces/Accoun
 import {ISafeProtocolManager} from "@safe-global/safe-core-protocol/contracts/interfaces/Manager.sol";
 import {SafeTransaction, SafeProtocolAction} from "@safe-global/safe-core-protocol/contracts/DataTypes.sol";
 import "./common/Enum.sol";
-import "../common/ReentrancyGuard.sol";
+import "./common/ReentrancyGuard.sol";
 import "./interfaces/IIntentSafePlugin.sol";
 
 /**
@@ -26,7 +26,7 @@ contract IntentPlugin is BasePluginWithEventMetadata, IDSNIntentModule, Reentran
     mapping(address => uint256) public userATONonceManager;
 
     constructor(
-        address _trustedSettlementEntity,
+        address _trustedSettlementEntity
     )
         BasePluginWithEventMetadata(
             PluginMetadata({
@@ -62,7 +62,7 @@ contract IntentPlugin is BasePluginWithEventMetadata, IDSNIntentModule, Reentran
     }
 
     /// @dev pay fees and broadcasts an ATO to the network
-    /// @param userAccount - account of the user, ato - ATO to be solved
+    /// @param userSafeAccount - account of the user, ato - ATO to be solved
     /// @return success - true if fess paid and ATO broadcasted successfully
     function executeATO(
         ISafeProtocolManager manager, 
@@ -107,9 +107,27 @@ contract IntentPlugin is BasePluginWithEventMetadata, IDSNIntentModule, Reentran
             nonce: 0
         });
 
-        manager.executeTransaction(safe, safeTx);
+        ISafe safeAccount = manager.getSafeFromAssetAddress(address(userSafeAccount));
+        SafeTransaction memory safeTx = SafeTransaction({
+            to: address(this),
+            value: 0,
+            data: abi.encodeWithSelector(
+                this.executeATO.selector,
+                manager,
+                userSafeAccount,
+                ato
+            ),
+            operation: SafeProtocolAction.CALL,
+            safeTxGas: 0,
+            baseGas: 0,
+            gasPrice: 0,
+            gasToken: address(0),
+            refundReceiver: address(0),
+            nonce: 0
+        });
+        manager.executeTransaction(userSafeAccount, safeTx);
         
-        emit ATOBroadcast(address(safeAccount), ato);
+        emit ATOBroadcast(address(userSafeAccount), ato);
         return true;
     }
 }
