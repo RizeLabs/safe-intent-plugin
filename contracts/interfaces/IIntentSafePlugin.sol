@@ -2,6 +2,8 @@
 pragma solidity ^0.8.18;
 
 import '../common/Enum.sol';
+import {ISafe} from "@safe-global/safe-core-protocol/contracts/interfaces/Accounts.sol";
+import {ISafeProtocolManager} from "@safe-global/safe-core-protocol/contracts/interfaces/Manager.sol";
 
 /// @title DSN Intent module interface
 /// @dev DSn developers
@@ -37,8 +39,12 @@ interface IDSNIntentModule {
     /// @dev Emitted once a stake by a solver is scheduled for withdrawal
     event ATOBroadcast(address indexed account, ATO indexed ato);
 
+
     /// @dev pay fees and broadcasts an ATO to the network
-    /// @param userAccount - account of the user, ato - ATO to be solved
+    /// @param userSafeAccount - account of the user, ato - ATO to be solved
     /// @return success - true if fess paid and ATO broadcasted successfully
-    function executeATO(address userAccount, ATO calldata ato) external returns (bool);
+    function executeATO(ISafeProtocolManager manager, ISafe userSafeAccount,ATO calldata ato) external returns (bool);
+        //     ISafeProtocolManager manager, 
+        // ISafe userSafeAccount,
+        // ATO calldata ato
 }

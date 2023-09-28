@@ -12,4 +12,10 @@ abstract contract Enum {
         DELEGATE_CALL,
         CALL
     }
+
+    enum ModuleType {
+        Plugin,
+        Hooks,
+        FunctionHandler
+    }
 }

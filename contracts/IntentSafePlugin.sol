@@ -25,6 +25,8 @@ contract IntentPlugin is BasePluginWithEventMetadata, IDSNIntentModule, Reentran
     /// @dev nonce manager for ATO comming from user
     mapping(address => uint256) public userATONonceManager;
 
+    SafeProtocolAction[] public protocolAction;
+
     constructor(
         address _trustedSettlementEntity
     )
@@ -57,7 +59,7 @@ contract IntentPlugin is BasePluginWithEventMetadata, IDSNIntentModule, Reentran
     /// @return fee - fee required for solving the ATO
     function getFeeQuote(
         ATO calldata ato
-    ) public view override returns (uint256) {
+    ) public view returns (uint256) {
         return 0; //! need to figure out way to calculate fees for intent
     }
 
@@ -70,63 +72,21 @@ contract IntentPlugin is BasePluginWithEventMetadata, IDSNIntentModule, Reentran
         ATO calldata ato
     ) external override returns (bool) {
         userATONonceManager[ato.sender] += 1;
+        require(address(userSafeAccount).balance >= getFeeQuote(ato), "Insufficient fee"); // check does user wallet has sufficient balance
+
         bytes32 atoHash = getATOHash(ato);
-        require(msg.value >= getFeeQuote(ato), "Insufficient fee");
-        //! contruct data for funding settlement contract via smart contract wallet 
-        
-        // construct fee payment transaction coded data for safe transaction
-        bytes memory data = abi.encodeWithSelector(
-            ISafe.executeTransaction.selector,
-            SETTLEMENT_ENTITY,
-            0,
-            abi.encodeWithSelector(
-                ISafe.fundContract.selector,
-                SETTLEMENT_ENTITY,
-                msg.value
-            ),
-            Enum.Operation.DELEGATE_CALL,
-            0,
-            0,
-            0,
-            address(0),
-            address(0),
-            ""
-        );
 
-        // construct safe transaction
-        SafeTransaction memory tx = SafeTransaction({
-            to: address(manager),
-            value: 0,
-            data: data,
-            operation: SafeProtocolAction.CALL,
-            safeTxGas: 0,
-            baseGas: 0,
-            gasPrice: 0,
-            gasToken: address(0),
-            refundReceiver: address(0),
-            nonce: 0
-        });
+        SafeProtocolAction memory action = SafeProtocolAction(payable(SETTLEMENT_ENTITY), getFeeQuote(ato), '0x');
 
-        ISafe safeAccount = manager.getSafeFromAssetAddress(address(userSafeAccount));
+        protocolAction.push(action);
+
         SafeTransaction memory safeTx = SafeTransaction({
-            to: address(this),
-            value: 0,
-            data: abi.encodeWithSelector(
-                this.executeATO.selector,
-                manager,
-                userSafeAccount,
-                ato
-            ),
-            operation: SafeProtocolAction.CALL,
-            safeTxGas: 0,
-            baseGas: 0,
-            gasPrice: 0,
-            gasToken: address(0),
-            refundReceiver: address(0),
-            nonce: 0
-        });
-        manager.executeTransaction(userSafeAccount, safeTx);
+            actions: protocolAction,
+            nonce: 0,
+            metadataHash: atoHash
+        }); 
         
+        manager.executeTransaction(userSafeAccount, safeTx);
         emit ATOBroadcast(address(userSafeAccount), ato);
         return true;
     }

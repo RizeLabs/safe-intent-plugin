@@ -1,6 +1,7 @@
 {
   "name": "hardhat-project",
   "scripts": {
+    "runop": "hardhat run ./src/runOp.ts",
     "compile": "./scripts/hh-wrapper compile"
   },
   "devDependencies": {
