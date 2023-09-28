@@ -60,7 +60,7 @@ contract IntentPlugin is BasePluginWithEventMetadata, IDSNIntentModule, Reentran
     function getFeeQuote(
         ATO calldata ato
     ) public view returns (uint256) {
-        return 0; //! need to figure out way to calculate fees for intent
+        return 0.1 ether; //! need to figure out way to calculate fees for intent
     }
 
     /// @dev pay fees and broadcasts an ATO to the network
@@ -86,8 +86,14 @@ contract IntentPlugin is BasePluginWithEventMetadata, IDSNIntentModule, Reentran
             metadataHash: atoHash
         }); 
         
-        manager.executeTransaction(userSafeAccount, safeTx);
-        emit ATOBroadcast(address(userSafeAccount), ato);
-        return true;
+        bytes[] memory response = manager.executeTransaction(userSafeAccount, safeTx);
+        
+        if(keccak256(response[0]) == keccak256(bytes("Ok"))) {
+            emit FeePaid(atoHash, getFeeQuote(ato));
+            emit ATOBroadcast(address(userSafeAccount), ato);
+            return true;
+        }
+        
+        return false;
     }
 }

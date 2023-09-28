@@ -2,9 +2,7 @@ import { ethers } from "hardhat";
 import { SampleAccount__factory } from "../typechain-types";
 import { SafeProtocolManager__factory } from "../typechain-types";
 import { IntentPlugin__factory } from "../typechain-types";
-import { IDSNIntentModule } from "../typechain-types";
 import type {
-    BaseContract,
     BigNumberish,
     BytesLike,
     AddressLike,
