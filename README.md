@@ -1,13 +1,13 @@
-# Sample Hardhat Project
+# SAFE Intent Plugin
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
+In one terminal run:
 
-Try running some of the following tasks:
 
 ```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat run scripts/deploy.ts
+npx harhat node
+```
+In another terminal run:
+
+```shell
+yarn run runop
 ```
