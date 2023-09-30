@@ -5,6 +5,8 @@ import {BasePluginWithEventMetadata, PluginMetadata} from "./Base.sol";
 import {ISafe} from "@safe-global/safe-core-protocol/contracts/interfaces/Accounts.sol";
 import {ISafeProtocolManager} from "@safe-global/safe-core-protocol/contracts/interfaces/Manager.sol";
 import {SafeTransaction, SafeProtocolAction} from "@safe-global/safe-core-protocol/contracts/DataTypes.sol";
+import {ISafeProtocolPlugin} from "@safe-global/safe-core-protocol/contracts/interfaces/Integrations.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "./common/Enum.sol";
 import "./common/ReentrancyGuard.sol";
 import "./interfaces/IIntentSafePlugin.sol";
@@ -95,5 +97,9 @@ contract IntentPlugin is BasePluginWithEventMetadata, IDSNIntentModule, Reentran
         }
         
         return false;
+    }
+
+    function supportsInterface(bytes4 interfaceId) external view returns (bool) {
+        return true;
     }
 }

@@ -57,10 +57,6 @@ abstract contract BasePlugin is ISafeProtocolPlugin {
         requiresRootAccess = metadata.requiresRootAccess;
         metadataHash = keccak256(metadata.encode());
     }
-
-    function supportsInterface(bytes4 interfaceId) external view override returns (bool) {
-        return interfaceId == type(ISafeProtocolPlugin).interfaceId || interfaceId == type(IERC165).interfaceId;
-    }
 }
 
 abstract contract BasePluginWithStoredMetadata is BasePlugin, IMetadataProvider {

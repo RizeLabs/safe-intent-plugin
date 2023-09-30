@@ -4,9 +4,14 @@ pragma solidity ^0.8.18;
 import {IAccount} from '../interfaces/IAccounts.sol';
 import {Executor} from '../base/Executor.sol';
 import {Enum} from '../common/Enum.sol';
+import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 
+contract SampleAccount is IAccount, Executor, Ownable {
 
-contract SampleAccount is IAccount, Executor {
+    address public accountOwner;
+    constructor(address _accountOwner) {
+        accountOwner = _accountOwner;
+    }
 
     function execTransactionFromModule(
         address payable to,
@@ -26,6 +31,16 @@ contract SampleAccount is IAccount, Executor {
         bytes memory data,
         Enum.Operation operation
     ) external override returns (bool success, bytes memory returnData) {
+        success = Executor.execute(to, value, data, operation, type(uint256).max);   
+        return (success, "Ok");
+    }
+
+    function execTransaction(
+        address to,
+        uint256 value,
+        bytes memory data,
+        Enum.Operation operation
+    ) onlyOwner() external returns (bool success, bytes memory returnData) {
         success = Executor.execute(to, value, data, operation, type(uint256).max);   
         return (success, "Ok");
     }
