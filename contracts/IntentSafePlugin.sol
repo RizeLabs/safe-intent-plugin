@@ -5,7 +5,7 @@ import {BasePluginWithEventMetadata, PluginMetadata} from "./Base.sol";
 import {ISafe} from "@safe-global/safe-core-protocol/contracts/interfaces/Accounts.sol";
 import {ISafeProtocolManager} from "@safe-global/safe-core-protocol/contracts/interfaces/Manager.sol";
 import {SafeTransaction, SafeProtocolAction} from "@safe-global/safe-core-protocol/contracts/DataTypes.sol";
-import {ISafeProtocolPlugin} from "@safe-global/safe-core-protocol/contracts/interfaces/Integrations.sol";
+import {ISafeProtocolPlugin} from "./interfaces/Modules.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "./common/Enum.sol";
 import "./common/ReentrancyGuard.sol";
@@ -19,8 +19,11 @@ import "./interfaces/IIntentSafePlugin.sol";
  * - emit fee payment event
  */
 
-contract IntentPlugin is BasePluginWithEventMetadata, IDSNIntentModule, ReentrancyGuard {
-    
+contract IntentPlugin is
+    BasePluginWithEventMetadata,
+    IDSNIntentModule,
+    ReentrancyGuard
+{
     /// @dev address of settlement contract to pay fees for ATO
     address public SETTLEMENT_ENTITY;
 
@@ -45,23 +48,24 @@ contract IntentPlugin is BasePluginWithEventMetadata, IDSNIntentModule, Reentran
         SETTLEMENT_ENTITY = _trustedSettlementEntity;
     }
 
-
     /// @dev return hash for a particular ATO
     /// @param ato - ATO struct
     /// @return hash of ATO
 
-    function getATOHash(
-        ATO calldata ato
-    ) public view returns (bytes32) {
-        return keccak256(abi.encodePacked(abi.encode(ato), userATONonceManager[ato.sender])); 
+    function getATOHash(ATO calldata ato) public view returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    abi.encode(ato),
+                    userATONonceManager[ato.sender]
+                )
+            );
     }
 
     /// @dev calculates and returns fees required for solving an ATO
     /// @param ato - ATO to be solved
     /// @return fee - fee required for solving the ATO
-    function getFeeQuote(
-        ATO calldata ato
-    ) public view returns (uint256) {
+    function getFeeQuote(ATO calldata ato) public view returns (uint256) {
         return 0.1 ether; //! need to figure out way to calculate fees for intent
     }
 
@@ -69,16 +73,23 @@ contract IntentPlugin is BasePluginWithEventMetadata, IDSNIntentModule, Reentran
     /// @param userSafeAccount - account of the user, ato - ATO to be solved
     /// @return success - true if fess paid and ATO broadcasted successfully
     function executeATO(
-        ISafeProtocolManager manager, 
+        ISafeProtocolManager manager,
         ISafe userSafeAccount,
         ATO calldata ato
     ) external override returns (bool) {
         userATONonceManager[ato.sender] += 1;
-        require(address(userSafeAccount).balance >= getFeeQuote(ato), "Insufficient fee"); // check does user wallet has sufficient balance
+        require(
+            address(userSafeAccount).balance >= getFeeQuote(ato),
+            "Insufficient fee"
+        ); // check does user wallet has sufficient balance
 
         bytes32 atoHash = getATOHash(ato);
 
-        SafeProtocolAction memory action = SafeProtocolAction(payable(SETTLEMENT_ENTITY), getFeeQuote(ato), '0x');
+        SafeProtocolAction memory action = SafeProtocolAction(
+            payable(SETTLEMENT_ENTITY),
+            getFeeQuote(ato),
+            "0x"
+        );
 
         protocolAction.push(action);
 
@@ -86,20 +97,26 @@ contract IntentPlugin is BasePluginWithEventMetadata, IDSNIntentModule, Reentran
             actions: protocolAction,
             nonce: 0,
             metadataHash: atoHash
-        }); 
-        
-        bytes[] memory response = manager.executeTransaction(userSafeAccount, safeTx);
-        
-        if(keccak256(response[0]) == keccak256(bytes("Ok"))) {
+        });
+
+        bytes[] memory response = manager.executeTransaction(
+            userSafeAccount,
+            safeTx
+        );
+
+        if (keccak256(response[0]) == keccak256(bytes("Ok"))) {
             emit FeePaid(atoHash, getFeeQuote(ato));
             emit ATOBroadcast(address(userSafeAccount), ato);
             return true;
         }
-        
+
         return false;
     }
 
-    function supportsInterface(bytes4 interfaceId) external view returns (bool) {
-        return true;
+    function supportsInterface(
+        bytes4 interfaceId
+    ) external view returns (bool) {
+        return
+            interfaceId == type(ISafeProtocolPlugin).interfaceId;
     }
 }
