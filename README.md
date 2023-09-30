@@ -9,5 +9,5 @@ npx harhat node
 In another terminal run:
 
 ```shell
-yarn run runop
+yarn run runop --network dev
 ```
