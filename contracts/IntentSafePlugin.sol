@@ -66,7 +66,7 @@ contract IntentPlugin is
     /// @param ato - ATO to be solved
     /// @return fee - fee required for solving the ATO
     function getFeeQuote(ATO calldata ato) public view returns (uint256) {
-        return 0.1 ether; //! need to figure out way to calculate fees for intent
+        return 0.1 ether; //! need to implement logic for fee calculation
     }
 
     /// @dev pay fees and broadcasts an ATO to the network
