@@ -49,45 +49,45 @@ contract IntentPlugin is
     }
 
     /// @dev return hash for a particular ATO
-    /// @param ato - ATO struct
+    /// @param _intent - intent to be solved
     /// @return hash of ATO
 
-    function getATOHash(ATO calldata ato) public view returns (bytes32) {
+    function getATOHash(ATO[] calldata _intent, address _sender) public view returns (bytes32) {
         return
             keccak256(
                 abi.encodePacked(
-                    abi.encode(ato),
-                    userATONonceManager[ato.sender]
+                    abi.encode(_intent),
+                    userATONonceManager[_sender]
                 )
             );
     }
 
     /// @dev calculates and returns fees required for solving an ATO
-    /// @param ato - ATO to be solved
+    /// @param _intent - Intent to be solved
     /// @return fee - fee required for solving the ATO
-    function getFeeQuote(ATO calldata ato) public view returns (uint256) {
+    function getFeeQuote(ATO[] calldata _intent) public view returns (uint256) {
         return 0.1 ether; //! need to implement logic for fee calculation
     }
 
     /// @dev pay fees and broadcasts an ATO to the network
-    /// @param userSafeAccount - account of the user, ato - ATO to be solved
+    /// @param _userSafeAccount - account of the user, ato - ATO to be solved
     /// @return success - true if fess paid and ATO broadcasted successfully
-    function executeATO(
-        ISafeProtocolManager manager,
-        ISafe userSafeAccount,
-        ATO calldata ato
+    function payFeesAndExecuteIntent(
+        ISafeProtocolManager _manager,
+        ISafe _userSafeAccount,
+        UserIntent calldata _userIntent
     ) external override returns (bool) {
-        userATONonceManager[ato.sender] += 1;
+        userATONonceManager[_userIntent.sender] += 1;
         require(
-            address(userSafeAccount).balance >= getFeeQuote(ato),
+            address(_userSafeAccount).balance >= getFeeQuote(_userIntent.intent),
             "Insufficient fee"
         ); // check does user wallet has sufficient balance
 
-        bytes32 atoHash = getATOHash(ato);
+        bytes32 atoHash = getATOHash(_userIntent.intent, _userIntent.sender);
 
         SafeProtocolAction memory action = SafeProtocolAction(
             payable(SETTLEMENT_ENTITY),
-            getFeeQuote(ato),
+            getFeeQuote(_userIntent.intent),
             "0x"
         );
 
@@ -99,14 +99,14 @@ contract IntentPlugin is
             metadataHash: atoHash
         });
 
-        bytes[] memory response = manager.executeTransaction(
-            userSafeAccount,
+        bytes[] memory response = _manager.executeTransaction(
+            _userSafeAccount,
             safeTx
         );
 
         if (keccak256(response[0]) == keccak256(bytes("Ok"))) {
-            emit FeePaid(atoHash, getFeeQuote(ato));
-            emit ATOBroadcast(address(userSafeAccount), ato);
+            emit FeePaid(atoHash, getFeeQuote(_userIntent.intent));
+            emit ATOBroadcast(address(_userSafeAccount), _userIntent.intent);
             return true;
         }
 
