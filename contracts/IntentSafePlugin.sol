@@ -13,9 +13,8 @@ import "./interfaces/IIntentSafePlugin.sol";
 
 /**
  * Module functionalities:
- * - pay fees to the settlement contract
+ * - pay fees to the settlement contract for ATO execution
  * - get quote for ATO payment
- * - emit ATO to solve for the driver
  * - emit fee payment event
  */
 
@@ -28,7 +27,7 @@ contract IntentPlugin is
     address public SETTLEMENT_ENTITY;
 
     /// @dev nonce manager for ATO comming from user
-    mapping(address => uint256) public userATONonceManager;
+    mapping(address => uint256) public userIntentNonceManager;
 
     SafeProtocolAction[] public protocolAction;
 
@@ -51,13 +50,12 @@ contract IntentPlugin is
     /// @dev return hash for a particular ATO
     /// @param _intent - intent to be solved
     /// @return hash of ATO
-
     function getATOHash(ATO[] calldata _intent, address _sender) public view returns (bytes32) {
         return
             keccak256(
                 abi.encodePacked(
                     abi.encode(_intent),
-                    userATONonceManager[_sender]
+                    userIntentNonceManager[_sender]
                 )
             );
     }
@@ -77,12 +75,19 @@ contract IntentPlugin is
         ISafe _userSafeAccount,
         UserIntent calldata _userIntent
     ) external override returns (bool) {
-        userATONonceManager[_userIntent.sender] += 1;
+        require(address(_userSafeAccount) != address(0), "Invalid safe account");
+        require(address(_userSafeAccount) == _userIntent.sender, "Sender is not the owner");
+        require(
+            userIntentNonceManager[_userIntent.sender] == _userIntent.nonce,
+            "Invalid nonce"
+        );
+
         require(
             address(_userSafeAccount).balance >= getFeeQuote(_userIntent.intent),
             "Insufficient fee"
         ); // check does user wallet has sufficient balance
 
+        userIntentNonceManager[_userIntent.sender] += 1;
         bytes32 atoHash = getATOHash(_userIntent.intent, _userIntent.sender);
 
         SafeProtocolAction memory action = SafeProtocolAction(
@@ -106,7 +111,6 @@ contract IntentPlugin is
 
         if (keccak256(response[0]) == keccak256(bytes("Ok"))) {
             emit FeePaid(atoHash, getFeeQuote(_userIntent.intent));
-            emit ATOBroadcast(address(_userSafeAccount), _userIntent.intent);
             return true;
         }
 
@@ -115,7 +119,7 @@ contract IntentPlugin is
 
     function supportsInterface(
         bytes4 interfaceId
-    ) external view returns (bool) {
+    ) external pure returns (bool) {
         return
             interfaceId == type(ISafeProtocolPlugin).interfaceId;
     }

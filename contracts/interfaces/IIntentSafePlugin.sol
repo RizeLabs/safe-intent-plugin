@@ -6,28 +6,26 @@ import {ISafe} from "@safe-global/safe-core-protocol/contracts/interfaces/Accoun
 import {ISafeProtocolManager} from "@safe-global/safe-core-protocol/contracts/interfaces/Manager.sol";
 
 /// @title DSN Intent module interface
-/// @dev DSn developers
 
 interface IDSNIntentModule {
 
     enum ATOOperation {
         SWAP,
         BRIDGE,
-        STAKE,
-        SEND,
-        UNSTAKE,
-        WITHDRAW
+        STAKE
     }
 
     /// @dev struct to store ATO information
     struct ATO {
         ATOOperation Operation;
-        bytes fieldsToOptimize;
-        bytes fieldsToOptimizeSchema;
-        uint256 chainId;
-        bytes payload;
-        bytes payloadSchema;
-        address sender;
+        uint256 minTokenIn; // how much token should be receive in min
+        uint256 maxTokenIn; // upper limit for duction auction
+        uint256 minTokenOut; // how much i can pay
+        uint256 maxTokenOut; // how much more i am ready to pay
+        address tokenInAddress;
+        address tokenOutAddress;
+        uint256 sourceChainId;
+        uint256 destinationChainId;
     }
 
     /// @dev UserIntent object to capture intent from user
@@ -43,10 +41,7 @@ interface IDSNIntentModule {
         uint256 fee
     );
 
-    /// @dev Emitted once a stake by a solver is scheduled for withdrawal
-    event ATOBroadcast(address indexed _account, ATO[] indexed _intent);
-
-    /// @dev pay fees and broadcasts an ATO to the network
+    /// @dev pay fees
     /// @param _userSafeAccount - account of the user, ato - ATO to be solved
     /// @return success - true if fess paid and ATO broadcasted successfully
     function payFeesAndExecuteIntent(ISafeProtocolManager _manager, ISafe _userSafeAccount, UserIntent calldata _userIntent) external returns (bool);

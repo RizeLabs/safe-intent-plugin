@@ -4,7 +4,7 @@ import "@nomicfoundation/hardhat-toolbox";
 const config: HardhatUserConfig = {
   solidity: "0.8.18",
   networks: {
-    dev: { url: "http://localhost:8545" },
+    dev: { url: "http://127.0.0.1:8545/" },
   }
 };
 

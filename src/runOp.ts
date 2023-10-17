@@ -6,26 +6,50 @@ import type { BigNumberish, BytesLike, AddressLike } from "ethers";
 import SafeProtocolManagerAbi from "../abis/SafeProtocolManager.json";
 import IntentPlugin from "../abis/IntentPlugin.json";
 
+enum SupportedChainId {
+  POLYGON = 137,
+  MAINNET = 1,
+  CELO = 42220
+}
+
 type ATOStruct = {
   Operation: BigNumberish;
-  fieldsToOptimize: BytesLike;
-  fieldsToOptimizeSchema: BytesLike;
-  chainId: BigNumberish;
-  payload: BytesLike;
-  payloadSchema: BytesLike;
-  sender: AddressLike;
+  minTokenIn: BigNumberish;
+  maxTokenIn: BigNumberish;
+  minTokenOut: BigNumberish;
+  maxTokenOut: BigNumberish;
+  tokenInAddress: AddressLike;
+  tokenOutAddress: AddressLike;
+  sourceChainId: number;
+  destinationChainId: number;
 };
+
+type UserIntent = {
+  sender: AddressLike;
+  intent: ATOStruct[];
+  nonce: BigNumberish;
+}
+
 
 (async () => {
   const sampleATO: ATOStruct = {
     Operation: ethers.toBigInt(1),
-    fieldsToOptimize: ethers.toUtf8Bytes(""),
-    fieldsToOptimizeSchema: ethers.toUtf8Bytes(""),
-    chainId: ethers.toBigInt(1),
-    payload: ethers.toUtf8Bytes(""),
-    payloadSchema: ethers.toUtf8Bytes(""),
-    sender: "",
+    minTokenIn: ethers.toBigInt(1),
+    maxTokenIn: ethers.toBigInt(5),
+    minTokenOut: ethers.toBigInt(5),
+    maxTokenOut: ethers.toBigInt(10),
+    tokenInAddress: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+    tokenOutAddress: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
+    sourceChainId: SupportedChainId.POLYGON,
+    destinationChainId: SupportedChainId.CELO,
   };
+
+  const sampleUserIntent: UserIntent = {
+    sender: "",
+    intent: [sampleATO],
+    nonce: ethers.toBigInt(0),
+  };
+
   const provider = ethers.provider;
   const userSigner = await provider.getSigner(0);
   const userAddress = await userSigner.getAddress();
@@ -113,29 +137,26 @@ type ATOStruct = {
     String(intentPlugin),
     userSigner
   );
-  sampleATO.sender = String(sampleAccount);
+  sampleUserIntent.sender = String(sampleAccount);
 
-  // ISafeProtocolManager manager,
-  // ISafe userSafeAccount,
-  // ATO calldata ato
-  console.log("Executing ATO...");
-  console.log("this is sample ATO", sampleATO);
+  console.log("Paying fees for intent execution...");
+  console.log("Sample Intent formed", sampleUserIntent);
 
-  const executeAtoTxnData = new ethers.Interface(IntentPlugin.abi).encodeFunctionData(
-    'executeATO',
+  const executeIntentTxnData = new ethers.Interface(IntentPlugin.abi).encodeFunctionData(
+    'payFeesAndExecuteIntent',
     [
       String(protocolManager),
       String(sampleAccount),
-      sampleATO
+      sampleUserIntent
     ]
   );
 
   const txn = await SampleAccountInstance.execTransaction(
-    sampleAccount,
+    String(sampleAccount),
     "0",
-    executeAtoTxnData,
+    executeIntentTxnData,
     0,
     { gasLimit: 1000000 }
   );
-  console.log("ATO sent for execution", txn.hash);
+  console.log("Intent is now valid for execution", txn.hash);
 })();
